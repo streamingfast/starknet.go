@@ -169,10 +169,7 @@ func (tr DeployAccountTransactionReceipt) GetExecutionStatus() TxnExecutionStatu
 }
 
 // L1HandlerTransactionReceipt L1 Handler Transaction Receipt
-type L1HandlerTransactionReceipt struct {
-	CommonTransactionReceipt
-	MessageHash string `json:"message_hash,omitempty"`
-}
+type L1HandlerTransactionReceipt CommonTransactionReceipt
 
 // Hash returns the transaction hash.
 func (tr L1HandlerTransactionReceipt) Hash() *felt.Felt {
