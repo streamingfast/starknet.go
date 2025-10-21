@@ -3,7 +3,7 @@ module github.com/NethermindEth/starknet.go
 go 1.25.0
 
 require (
-	github.com/NethermindEth/juno v0.15.7
+	github.com/NethermindEth/juno v0.15.8
 	github.com/gorilla/websocket v1.5.3
 	github.com/joho/godotenv v1.4.0
 	github.com/stretchr/testify v1.10.0
@@ -25,3 +25,5 @@ require (
 )
 
 require golang.org/x/sys v0.35.0 // indirect
+
+replace github.com/NethermindEth/juno v0.15.8 => github.com/streamingfast/juno v0.0.0-20251021125254-bd8ca1cbc77d

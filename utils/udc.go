@@ -91,10 +91,7 @@ func BuildUDCCalldata(
 
 	// salt
 	if opts.Salt == nil {
-		randFelt, err := new(felt.Felt).SetRandom()
-		if err != nil {
-			return result, nil, err
-		}
+		randFelt := new(felt.Felt).SetRandom()
 		opts.Salt = randFelt
 	}
 
