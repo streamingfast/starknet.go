@@ -15,6 +15,8 @@ import (
 	time "time"
 
 	felt "github.com/NethermindEth/juno/core/felt"
+	account "github.com/NethermindEth/starknet.go/account"
+	contracts "github.com/NethermindEth/starknet.go/contracts"
 	rpc "github.com/NethermindEth/starknet.go/rpc"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -23,6 +25,7 @@ import (
 type MockAccountInterface struct {
 	ctrl     *gomock.Controller
 	recorder *MockAccountInterfaceMockRecorder
+	isgomock struct{}
 }
 
 // MockAccountInterfaceMockRecorder is the mock recorder for MockAccountInterface.
@@ -42,19 +45,96 @@ func (m *MockAccountInterface) EXPECT() *MockAccountInterfaceMockRecorder {
 	return m.recorder
 }
 
-// PrecomputeAccountAddress mocks base method.
-func (m *MockAccountInterface) PrecomputeAccountAddress(salt, classHash *felt.Felt, constructorCalldata []*felt.Felt) (*felt.Felt, error) {
+// BuildAndEstimateDeployAccountTxn mocks base method.
+func (m *MockAccountInterface) BuildAndEstimateDeployAccountTxn(ctx context.Context, salt, classHash *felt.Felt, constructorCalldata []*felt.Felt, opts *account.TxnOptions) (*rpc.BroadcastDeployAccountTxnV3, *felt.Felt, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PrecomputeAccountAddress", salt, classHash, constructorCalldata)
+	ret := m.ctrl.Call(m, "BuildAndEstimateDeployAccountTxn", ctx, salt, classHash, constructorCalldata, opts)
+	ret0, _ := ret[0].(*rpc.BroadcastDeployAccountTxnV3)
+	ret1, _ := ret[1].(*felt.Felt)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// BuildAndEstimateDeployAccountTxn indicates an expected call of BuildAndEstimateDeployAccountTxn.
+func (mr *MockAccountInterfaceMockRecorder) BuildAndEstimateDeployAccountTxn(ctx, salt, classHash, constructorCalldata, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndEstimateDeployAccountTxn", reflect.TypeOf((*MockAccountInterface)(nil).BuildAndEstimateDeployAccountTxn), ctx, salt, classHash, constructorCalldata, opts)
+}
+
+// BuildAndSendDeclareTxn mocks base method.
+func (m *MockAccountInterface) BuildAndSendDeclareTxn(ctx context.Context, casmClass *contracts.CasmClass, contractClass *contracts.ContractClass, opts *account.TxnOptions) (rpc.AddDeclareTransactionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BuildAndSendDeclareTxn", ctx, casmClass, contractClass, opts)
+	ret0, _ := ret[0].(rpc.AddDeclareTransactionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BuildAndSendDeclareTxn indicates an expected call of BuildAndSendDeclareTxn.
+func (mr *MockAccountInterfaceMockRecorder) BuildAndSendDeclareTxn(ctx, casmClass, contractClass, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndSendDeclareTxn", reflect.TypeOf((*MockAccountInterface)(nil).BuildAndSendDeclareTxn), ctx, casmClass, contractClass, opts)
+}
+
+// BuildAndSendInvokeTxn mocks base method.
+func (m *MockAccountInterface) BuildAndSendInvokeTxn(ctx context.Context, functionCalls []rpc.InvokeFunctionCall, opts *account.TxnOptions) (rpc.AddInvokeTransactionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "BuildAndSendInvokeTxn", ctx, functionCalls, opts)
+	ret0, _ := ret[0].(rpc.AddInvokeTransactionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// BuildAndSendInvokeTxn indicates an expected call of BuildAndSendInvokeTxn.
+func (mr *MockAccountInterfaceMockRecorder) BuildAndSendInvokeTxn(ctx, functionCalls, opts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildAndSendInvokeTxn", reflect.TypeOf((*MockAccountInterface)(nil).BuildAndSendInvokeTxn), ctx, functionCalls, opts)
+}
+
+// DeployContractWithUDC mocks base method.
+func (m *MockAccountInterface) DeployContractWithUDC(ctx context.Context, classHash *felt.Felt, constructorCalldata []*felt.Felt, txnOpts *account.TxnOptions, udcOpts *account.UDCOptions) (rpc.AddInvokeTransactionResponse, *felt.Felt, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeployContractWithUDC", ctx, classHash, constructorCalldata, txnOpts, udcOpts)
+	ret0, _ := ret[0].(rpc.AddInvokeTransactionResponse)
+	ret1, _ := ret[1].(*felt.Felt)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// DeployContractWithUDC indicates an expected call of DeployContractWithUDC.
+func (mr *MockAccountInterfaceMockRecorder) DeployContractWithUDC(ctx, classHash, constructorCalldata, txnOpts, udcOpts any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeployContractWithUDC", reflect.TypeOf((*MockAccountInterface)(nil).DeployContractWithUDC), ctx, classHash, constructorCalldata, txnOpts, udcOpts)
+}
+
+// Nonce mocks base method.
+func (m *MockAccountInterface) Nonce(ctx context.Context) (*felt.Felt, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Nonce", ctx)
 	ret0, _ := ret[0].(*felt.Felt)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// PrecomputeAccountAddress indicates an expected call of PrecomputeAccountAddress.
-func (mr *MockAccountInterfaceMockRecorder) PrecomputeAccountAddress(salt, classHash, constructorCalldata any) *gomock.Call {
+// Nonce indicates an expected call of Nonce.
+func (mr *MockAccountInterfaceMockRecorder) Nonce(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrecomputeAccountAddress", reflect.TypeOf((*MockAccountInterface)(nil).PrecomputeAccountAddress), salt, classHash, constructorCalldata)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Nonce", reflect.TypeOf((*MockAccountInterface)(nil).Nonce), ctx)
+}
+
+// SendTransaction mocks base method.
+func (m *MockAccountInterface) SendTransaction(ctx context.Context, txn rpc.BroadcastTxn) (rpc.TransactionResponse, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendTransaction", ctx, txn)
+	ret0, _ := ret[0].(rpc.TransactionResponse)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SendTransaction indicates an expected call of SendTransaction.
+func (mr *MockAccountInterfaceMockRecorder) SendTransaction(ctx, txn any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendTransaction", reflect.TypeOf((*MockAccountInterface)(nil).SendTransaction), ctx, txn)
 }
 
 // Sign mocks base method.
@@ -73,7 +153,7 @@ func (mr *MockAccountInterfaceMockRecorder) Sign(ctx, msg any) *gomock.Call {
 }
 
 // SignDeclareTransaction mocks base method.
-func (m *MockAccountInterface) SignDeclareTransaction(ctx context.Context, tx *rpc.DeclareTxnV2) error {
+func (m *MockAccountInterface) SignDeclareTransaction(ctx context.Context, tx rpc.DeclareTxnType) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SignDeclareTransaction", ctx, tx)
 	ret0, _ := ret[0].(error)
@@ -87,7 +167,7 @@ func (mr *MockAccountInterfaceMockRecorder) SignDeclareTransaction(ctx, tx any) 
 }
 
 // SignDeployAccountTransaction mocks base method.
-func (m *MockAccountInterface) SignDeployAccountTransaction(ctx context.Context, tx *rpc.DeployAccountTxn, precomputeAddress *felt.Felt) error {
+func (m *MockAccountInterface) SignDeployAccountTransaction(ctx context.Context, tx rpc.DeployAccountType, precomputeAddress *felt.Felt) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SignDeployAccountTransaction", ctx, tx, precomputeAddress)
 	ret0, _ := ret[0].(error)
@@ -101,7 +181,7 @@ func (mr *MockAccountInterfaceMockRecorder) SignDeployAccountTransaction(ctx, tx
 }
 
 // SignInvokeTransaction mocks base method.
-func (m *MockAccountInterface) SignInvokeTransaction(ctx context.Context, tx *rpc.InvokeTxnV1) error {
+func (m *MockAccountInterface) SignInvokeTransaction(ctx context.Context, tx rpc.InvokeTxnType) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SignInvokeTransaction", ctx, tx)
 	ret0, _ := ret[0].(error)
@@ -157,6 +237,21 @@ func (m *MockAccountInterface) TransactionHashInvoke(invokeTxn rpc.InvokeTxnType
 func (mr *MockAccountInterfaceMockRecorder) TransactionHashInvoke(invokeTxn any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "TransactionHashInvoke", reflect.TypeOf((*MockAccountInterface)(nil).TransactionHashInvoke), invokeTxn)
+}
+
+// Verify mocks base method.
+func (m *MockAccountInterface) Verify(msgHash *felt.Felt, signature []*felt.Felt) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Verify", msgHash, signature)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Verify indicates an expected call of Verify.
+func (mr *MockAccountInterfaceMockRecorder) Verify(msgHash, signature any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Verify", reflect.TypeOf((*MockAccountInterface)(nil).Verify), msgHash, signature)
 }
 
 // WaitForTransactionReceipt mocks base method.

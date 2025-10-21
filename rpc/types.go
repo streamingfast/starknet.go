@@ -9,7 +9,8 @@ import (
 )
 
 type ResultPageRequest struct {
-	// a pointer to the last element of the delivered page, use this token in a subsequent query to obtain the next page
+	// a pointer to the last element of the delivered page, use this token in a
+	// subsequent query to obtain the next page
 	ContinuationToken string `json:"continuation_token,omitempty"`
 	ChunkSize         int    `json:"chunk_size"`
 }
@@ -32,9 +33,9 @@ type ContractStorageDiffItem struct {
 
 // DeclaredClassesItem is an object with class_hash and compiled_class_hash
 type DeclaredClassesItem struct {
-	//The hash of the declared class
+	// The hash of the declared class
 	ClassHash *felt.Felt `json:"class_hash"`
-	//The Cairo assembly hash corresponding to the declared class
+	// The Cairo assembly hash corresponding to the declared class
 	CompiledClassHash *felt.Felt `json:"compiled_class_hash"`
 }
 
@@ -48,9 +49,9 @@ type DeployedContractItem struct {
 
 // contracts whose class was replaced
 type ReplacedClassesItem struct {
-	//The address of the contract whose class was replaced
+	// The address of the contract whose class was replaced
 	ContractClass *felt.Felt `json:"contract_address"`
-	//The new class hash
+	// The new class hash
 	ClassHash *felt.Felt `json:"class_hash"`
 }
 
@@ -81,48 +82,51 @@ type StateDiff struct {
 
 // STATE_UPDATE in spec
 type StateUpdateOutput struct {
-	// BlockHash is the block identifier,
+	// BlockHash is the block identifier. Nil for pre_confirmed block.
 	BlockHash *felt.Felt `json:"block_hash"`
-	// NewRoot is the new global state root.
+	// NewRoot is the new global state root. Nil for pre_confirmed block.
 	NewRoot *felt.Felt `json:"new_root"`
-	// Pending
-	PendingStateUpdate
+	PreConfirmedStateUpdate
 }
 
-// PENDING_STATE_UPDATE in spec
-type PendingStateUpdate struct {
+// PRE_CONFIRMED_STATE_UPDATE in spec
+type PreConfirmedStateUpdate struct {
 	// OldRoot is the previous global state root.
-	OldRoot *felt.Felt `json:"old_root"`
-	// AcceptedTime is when the block was accepted on L1.
-	StateDiff StateDiff `json:"state_diff"`
+	OldRoot   *felt.Felt `json:"old_root"`
+	StateDiff StateDiff  `json:"state_diff"`
 }
 
-// SyncStatus is An object describing the node synchronization status
+// SyncStatus is An object describing the node synchronisation status
 type SyncStatus struct {
-	SyncStatus        bool       // todo(remove? not in spec)
+	// A boolean indicating whether the node is syncing. If false, all other fields are empty.
+	IsSyncing bool
+
+	// All these fields are only present if IsSyncing is true.
 	StartingBlockHash *felt.Felt `json:"starting_block_hash,omitempty"`
-	StartingBlockNum  NumAsHex   `json:"starting_block_num,omitempty"`
+	StartingBlockNum  uint64     `json:"starting_block_num,omitempty"`
 	CurrentBlockHash  *felt.Felt `json:"current_block_hash,omitempty"`
-	CurrentBlockNum   NumAsHex   `json:"current_block_num,omitempty"`
+	CurrentBlockNum   uint64     `json:"current_block_num,omitempty"`
 	HighestBlockHash  *felt.Felt `json:"highest_block_hash,omitempty"`
-	HighestBlockNum   NumAsHex   `json:"highest_block_num,omitempty"`
+	HighestBlockNum   uint64     `json:"highest_block_num,omitempty"`
 }
 
 // MarshalJSON marshals the SyncStatus struct into JSON format.
 //
 // It returns a byte slice and an error. The byte slice represents the JSON
 // encoding of the SyncStatus struct, while the error indicates any error that
-// occurred during the marshaling process.
+// occurred during the marshalling process.
 //
 // Parameters:
 //
 //	none
 //
 // Returns:
-// - []byte: the JSON encoding of the SyncStatus struct
-// - error: any error that occurred during the marshaling process
+//   - []byte: the JSON encoding of the SyncStatus struct
+//   - error: any error that occurred during the marshalling process
+//
+
 func (s SyncStatus) MarshalJSON() ([]byte, error) {
-	if !s.SyncStatus {
+	if !s.IsSyncing {
 		return []byte("false"), nil
 	}
 	output := map[string]interface{}{}
@@ -132,6 +136,7 @@ func (s SyncStatus) MarshalJSON() ([]byte, error) {
 	output["current_block_num"] = s.CurrentBlockNum
 	output["highest_block_hash"] = s.HighestBlockHash
 	output["highest_block_num"] = s.HighestBlockNum
+
 	return json.Marshal(output)
 }
 
@@ -142,27 +147,25 @@ func (s SyncStatus) MarshalJSON() ([]byte, error) {
 //	-data: It takes a byte slice as input representing the JSON data to be unmarshaled.
 //
 // Returns:
-// - error: an error if the unmarshaling fails
+//   - error: an error if the unmarshaling fails
 func (s *SyncStatus) UnmarshalJSON(data []byte) error {
-	return json.Unmarshal(data, s)
+	if string(data) == "false" {
+		s.IsSyncing = false
 
-	// if string(data) == "false" {
-	// 	s.SyncStatus = false
-	// 	return nil
-	// }
-	// s.SyncStatus = true
-	// output := map[string]interface{}{}
-	// err := json.Unmarshal(data, &output)
-	// if err != nil {
-	// 	return err
-	// }
-	// s.StartingBlockHash = output["starting_block_hash"].(string)
-	// s.StartingBlockNum = utils.NumAsHex(output["starting_block_num"].(string))
-	// s.CurrentBlockHash = output["current_block_hash"].(string)
-	// s.CurrentBlockNum = utils.NumAsHex(output["current_block_num"].(string))
-	// s.HighestBlockHash = output["highest_block_hash"].(string)
-	// s.HighestBlockNum = utils.NumAsHex(output["highest_block_num"].(string))
-	// return nil
+		return nil
+	}
+
+	type alias SyncStatus
+	var result alias
+	err := json.Unmarshal(data, &result)
+	if err != nil {
+		return err
+	}
+
+	*s = SyncStatus(result)
+	s.IsSyncing = true
+
+	return nil
 }
 
 // AddDeclareTransactionOutput provides the output for AddDeclareTransaction.
@@ -180,6 +183,17 @@ type FunctionCall struct {
 	Calldata []*felt.Felt `json:"calldata"`
 }
 
+// InvokeFunctionCall represents a function call to be invoked on a contract.
+// It's a helper type used to build a FunctionCall for a v3 Invoke transaction.
+type InvokeFunctionCall struct {
+	// The address of the contract to invoke
+	ContractAddress *felt.Felt
+	// The name of the function to invoke
+	FunctionName string
+	// The parameters passed to the function
+	CallData []*felt.Felt
+}
+
 // TxDetails contains details needed for computing transaction hashes
 type TxDetails struct {
 	Nonce   *felt.Felt
@@ -187,24 +201,45 @@ type TxDetails struct {
 	Version TransactionVersion
 }
 
-type FeeEstimate struct {
-	// The Ethereum gas consumption of the transaction
-	GasConsumed *felt.Felt `json:"gas_consumed"`
+// Fee estimation common fields
+type FeeEstimationCommon struct {
+	// The Ethereum gas consumption of the transaction, charged for L1->L2
+	// messages and, depending on the block's DA_MODE, state diffs
+	L1GasConsumed *felt.Felt `json:"l1_gas_consumed"`
 
-	// The gas price (in wei or fri, depending on the tx version) that was used in the cost estimation.
-	GasPrice *felt.Felt `json:"gas_price"`
+	// The gas price (in wei or fri, depending on the tx version) that was
+	// used in the cost estimation.
+	L1GasPrice *felt.Felt `json:"l1_gas_price"`
+
+	// The L2 gas consumption of the transaction
+	L2GasConsumed *felt.Felt `json:"l2_gas_consumed"`
+
+	// The L2 gas price (in wei or fri, depending on the tx version) that
+	// was used in the cost estimation.
+	L2GasPrice *felt.Felt `json:"l2_gas_price"`
 
 	// The Ethereum data gas consumption of the transaction.
-	DataGasConsumed *felt.Felt `json:"data_gas_consumed"`
+	L1DataGasConsumed *felt.Felt `json:"l1_data_gas_consumed"`
 
-	// The data gas price (in wei or fri, depending on the tx version) that was used in the cost estimation.
-	DataGasPrice *felt.Felt `json:"data_gas_price"`
+	// The data gas price (in wei or fri, depending on the tx version) that
+	// was used in the cost estimation.
+	L1DataGasPrice *felt.Felt `json:"l1_data_gas_price"`
 
-	// The estimated fee for the transaction (in wei or fri, depending on the tx version), equals to gas_consumed*gas_price + data_gas_consumed*data_gas_price.
+	// The estimated fee for the transaction (in wei or fri, depending on the
+	// tx version), equals to gas_consumed*gas_price + data_gas_consumed*data_gas_price.
 	OverallFee *felt.Felt `json:"overall_fee"`
+}
 
-	// Units in which the fee is given
-	FeeUnit FeePaymentUnit `json:"unit"`
+type FeeEstimation struct {
+	FeeEstimationCommon
+	// Units in which the fee is given, can only be FRI
+	Unit PriceUnitFri `json:"unit"`
+}
+
+type MessageFeeEstimation struct {
+	FeeEstimationCommon
+	// Units in which the fee is given, can only be WEI
+	Unit PriceUnitWei `json:"unit"`
 }
 
 type TxnExecutionStatus string
@@ -217,39 +252,43 @@ const (
 // UnmarshalJSON unmarshals the JSON data into a TxnExecutionStatus struct.
 //
 // Parameters:
-// - data: It takes a byte slice as a parameter, which represents the JSON data to be unmarshalled
+//   - data: It takes a byte slice as a parameter, which represents the JSON data to
+//     be unmarshalled
+//
 // Returns:
-// - error: an error if the unmarshaling fails
-func (ts *TxnExecutionStatus) UnmarshalJSON(data []byte) error {
+//   - error: an error if the unmarshaling fails
+func (ex *TxnExecutionStatus) UnmarshalJSON(data []byte) error {
 	unquoted, err := strconv.Unquote(string(data))
 	if err != nil {
 		return err
 	}
 	switch unquoted {
 	case "SUCCEEDED":
-		*ts = TxnExecutionStatusSUCCEEDED
+		*ex = TxnExecutionStatusSUCCEEDED
 	case "REVERTED":
-		*ts = TxnExecutionStatusREVERTED
+		*ex = TxnExecutionStatusREVERTED
 	default:
-		return fmt.Errorf("unsupported status: %s", data)
+		return fmt.Errorf("unsupported execution status: %s", data)
 	}
+
 	return nil
 }
 
 // MarshalJSON returns the JSON encoding of the TxnExecutionStatus.
 //
-// It marshals the TxnExecutionStatus into a byte slice by quoting its string representation.
-// The function returns the marshaled byte slice and a nil error.
+// It marshals the TxnExecutionStatus into a byte slice by quoting its string
+// representation.
+// The function returns the marshalled byte slice and a nil error.
 //
 // Parameters:
 //
 //	none
 //
 // Returns:
-// - []byte: the JSON encoding of the TxnExecutionStatus
-// - error: the error if there was an issue marshaling
-func (ts TxnExecutionStatus) MarshalJSON() ([]byte, error) {
-	return []byte(strconv.Quote(string(ts))), nil
+//   - []byte: the JSON encoding of the TxnExecutionStatus
+//   - error: the error if there was an issue marshalling
+func (ex TxnExecutionStatus) MarshalJSON() ([]byte, error) {
+	return []byte(strconv.Quote(string(ex))), nil
 }
 
 // String returns the string representation of the TxnExecutionStatus.
@@ -259,37 +298,43 @@ func (ts TxnExecutionStatus) MarshalJSON() ([]byte, error) {
 //	none
 //
 // Returns:
-// - string: the string representation of the TxnExecutionStatus
-func (s TxnExecutionStatus) String() string {
-	return string(s)
+//   - string: the string representation of the TxnExecutionStatus
+func (ex TxnExecutionStatus) String() string {
+	return string(ex)
 }
 
 type TxnFinalityStatus string
 
 const (
-	TxnFinalityStatusAcceptedOnL1 TxnFinalityStatus = "ACCEPTED_ON_L1"
+	TxnFinalityStatusPreConfirmed TxnFinalityStatus = "PRE_CONFIRMED"
 	TxnFinalityStatusAcceptedOnL2 TxnFinalityStatus = "ACCEPTED_ON_L2"
+	TxnFinalityStatusAcceptedOnL1 TxnFinalityStatus = "ACCEPTED_ON_L1"
 )
 
 // UnmarshalJSON unmarshals the JSON data into a TxnFinalityStatus.
 //
 // Parameters:
-// - data: It takes a byte slice as a parameter, which represents the JSON data to be unmarshalled
+//   - data: It takes a byte slice as a parameter, which represents the JSON data to
+//     be unmarshalled
+//
 // Returns:
-// - error: an error if the unmarshaling fails
-func (ts *TxnFinalityStatus) UnmarshalJSON(data []byte) error {
+//   - error: an error if the unmarshaling fails
+func (fs *TxnFinalityStatus) UnmarshalJSON(data []byte) error {
 	unquoted, err := strconv.Unquote(string(data))
 	if err != nil {
 		return err
 	}
 	switch unquoted {
-	case "ACCEPTED_ON_L1":
-		*ts = TxnFinalityStatusAcceptedOnL1
+	case "PRE_CONFIRMED":
+		*fs = TxnFinalityStatusPreConfirmed
 	case "ACCEPTED_ON_L2":
-		*ts = TxnFinalityStatusAcceptedOnL2
+		*fs = TxnFinalityStatusAcceptedOnL2
+	case "ACCEPTED_ON_L1":
+		*fs = TxnFinalityStatusAcceptedOnL1
 	default:
-		return fmt.Errorf("unsupported status: %s", data)
+		return fmt.Errorf("unsupported finality status: %s", data)
 	}
+
 	return nil
 }
 
@@ -300,10 +345,10 @@ func (ts *TxnFinalityStatus) UnmarshalJSON(data []byte) error {
 //	none
 //
 // Returns:
-// - []byte: a byte slice
-// - error: an error if any
-func (ts TxnFinalityStatus) MarshalJSON() ([]byte, error) {
-	return []byte(strconv.Quote(string(ts))), nil
+//   - []byte: a byte slice
+//   - error: an error if any
+func (fs TxnFinalityStatus) MarshalJSON() ([]byte, error) {
+	return []byte(strconv.Quote(string(fs))), nil
 }
 
 // String returns the string representation of the TxnFinalityStatus.
@@ -313,7 +358,7 @@ func (ts TxnFinalityStatus) MarshalJSON() ([]byte, error) {
 //	none
 //
 // Returns:
-// - string: the string representation of the TxnFinalityStatus
-func (s TxnFinalityStatus) String() string {
-	return string(s)
+//   - string: the string representation of the TxnFinalityStatus
+func (fs TxnFinalityStatus) String() string {
+	return string(fs)
 }

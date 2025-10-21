@@ -1,3 +1,4 @@
+.tool-versions
 starknet.go
 vendor/
 .env*
@@ -9,9 +10,10 @@ rpc*/.env.testnet
 
 tmp/
 
-examples/**/*.json
 examples/**/*.sum
 
 */**/*abi.json
 
 .idea/
+
+.vscode/settings.json

@@ -5,10 +5,14 @@ import (
 	_ "embed"
 	"encoding/json"
 	"errors"
-	"os"
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/NethermindEth/juno/core/felt"
+	"github.com/NethermindEth/starknet.go/internal/tests"
+	internalUtils "github.com/NethermindEth/starknet.go/internal/utils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -16,18 +20,21 @@ import (
 //
 // The function tests the MarshalJSON method of the BlockID struct by providing
 // different scenarios and verifying the output against the expected values.
-// The scenarios include testing the serialization of the "latest" and
-// "pending" tags, testing an invalid tag, testing the serialization of a
-// block number, and testing the serialization of a block hash.
+// The scenarios include testing the serialisation of the "latest" and
+// "pre_confirmed" tags, testing an invalid tag, testing the serialisation of a
+// block number, and testing the serialisation of a block hash.
 // The function uses the testing.T parameter to report any errors that occur
 // during the execution of the test cases.
 //
 // Parameters:
-// - t: the testing object for running the test cases
+//   - t: the testing object for running the test cases
+//
 // Returns:
 //
 //	none
 func TestBlockID_Marshal(t *testing.T) {
+	tests.RunTestOn(t, tests.MockEnv)
+
 	blockNumber := uint64(420)
 	for _, tc := range []struct {
 		id      BlockID
@@ -40,9 +47,9 @@ func TestBlockID_Marshal(t *testing.T) {
 		want: `"latest"`,
 	}, {
 		id: BlockID{
-			Tag: "pending",
+			Tag: "pre_confirmed",
 		},
-		want: `"pending"`,
+		want: `"pre_confirmed"`,
 	}, {
 		id: BlockID{
 			Tag: "bad tag",
@@ -56,6 +63,7 @@ func TestBlockID_Marshal(t *testing.T) {
 	}, {
 		id: func() BlockID {
 			h, _ := new(felt.Felt).SetString("0xdead")
+
 			return BlockID{
 				Hash: h,
 			}
@@ -77,30 +85,34 @@ func TestBlockID_Marshal(t *testing.T) {
 
 // TestBlockStatus is a unit test for the BlockStatus function.
 //
-// The test checks the behavior of the BlockStatus function by iterating through a list of test cases.
+// The test checks the behaviour of the BlockStatus function by iterating through a list of test cases.
 //
 // Parameters:
-// - t: A testing.T object used for reporting test failures and logging.
+//   - t: A testing.T object used for reporting test failures and logging.
+//
 // Returns:
 //
 //	none
 func TestBlockStatus(t *testing.T) {
+	tests.RunTestOn(t, tests.MockEnv)
+
 	for _, tc := range []struct {
 		status string
 		want   BlockStatus
-	}{{
-		status: `"PENDING"`,
-		want:   BlockStatus_Pending,
-	}, {
-		status: `"ACCEPTED_ON_L2"`,
-		want:   BlockStatus_AcceptedOnL2,
-	}, {
-		status: `"ACCEPTED_ON_L1"`,
-		want:   BlockStatus_AcceptedOnL1,
-	}, {
-		status: `"REJECTED"`,
-		want:   BlockStatus_Rejected,
-	}} {
+	}{
+		{
+			status: `"PRE_CONFIRMED"`,
+			want:   BlockStatusPreConfirmed,
+		},
+		{
+			status: `"ACCEPTED_ON_L2"`,
+			want:   BlockStatusAcceptedOnL2,
+		},
+		{
+			status: `"ACCEPTED_ON_L1"`,
+			want:   BlockStatusAcceptedOnL1,
+		},
+	} {
 		tx := new(BlockStatus)
 		if err := json.Unmarshal([]byte(tc.status), tx); err != nil {
 			t.Errorf("unmarshalling status want: %s", err)
@@ -108,7 +120,7 @@ func TestBlockStatus(t *testing.T) {
 	}
 }
 
-//go:embed tests/block/block.json
+//go:embed testData/block/sepoliaBlockTxs65083.json
 var rawBlock []byte
 
 // TestBlock_Unmarshal tests the Unmarshal function of the Block type.
@@ -118,11 +130,13 @@ var rawBlock []byte
 // fails with a fatal error message.
 //
 // Parameters:
-// - t: the testing object for running the test
+//   - t: the testing object for running the test
+//
 // Returns:
 //
 //	none
 func TestBlock_Unmarshal(t *testing.T) {
+	tests.RunTestOn(t, tests.MockEnv)
 	b := Block{}
 	if err := json.Unmarshal(rawBlock, &b); err != nil {
 		t.Fatalf("Unmarshalling block: %v", err)
@@ -130,40 +144,178 @@ func TestBlock_Unmarshal(t *testing.T) {
 }
 
 func TestBlockWithReceipts(t *testing.T) {
-	provider := &Provider{c: &rpcMock{}}
+	tests.RunTestOn(t, tests.MockEnv, tests.TestnetEnv, tests.MainnetEnv, tests.IntegrationEnv)
 
-	ctx := context.Background()
+	testConfig := BeforeEach(t, false)
 
 	type testSetType struct {
-		BlockID                   BlockID
-		ExpectedBlockWithReceipts BlockWithReceipts
-		ExpectedErr               *RPCError
+		BlockID                               BlockID
+		ExpectedBlockWithReceipts             *BlockWithReceipts
+		ExpectedPreConfirmedBlockWithReceipts *PreConfirmedBlockWithReceipts
 	}
 
-	var expectedBlockWithReceipts struct {
-		Result BlockWithReceipts `json:"result"`
-	}
-	read, err := os.ReadFile("tests/blockWithReceipts/integration332275.json")
-	require.Nil(t, err)
-	require.Nil(t, json.Unmarshal(read, &expectedBlockWithReceipts))
+	var blockWithReceipt BlockWithReceipts
 
-	testSet := map[string][]testSetType{
-		"mock": {testSetType{
-			BlockID:                   BlockID{Tag: "tests/blockWithReceipts/integration332275.json"},
-			ExpectedBlockWithReceipts: expectedBlockWithReceipts.Result,
-			ExpectedErr:               nil,
+	switch tests.TEST_ENV {
+	case tests.TestnetEnv:
+		blockWithReceipt = *internalUtils.TestUnmarshalJSONFileToType[BlockWithReceipts](t, "./testData/blockWithReceipts/sepoliaBlockReceipts64159.json", "result")
+	case tests.MainnetEnv:
+		blockWithReceipt = *internalUtils.TestUnmarshalJSONFileToType[BlockWithReceipts](t, "./testData/blockWithReceipts/mainnetBlockReceipts588763.json", "result")
+	case tests.IntegrationEnv:
+		blockWithReceipt = *internalUtils.TestUnmarshalJSONFileToType[BlockWithReceipts](t, "./testData/blockWithReceipts/integration1300000.json", "result")
+	}
+
+	blockMock123 := BlockWithReceipts{
+		BlockHeader{
+			Hash: internalUtils.DeadBeef,
 		},
+		"ACCEPTED_ON_L1",
+		BlockBodyWithReceipts{
+			Transactions: []TransactionWithReceipt{
+				{
+					Transaction: BlockTransaction{
+						Hash: internalUtils.DeadBeef,
+						Transaction: InvokeTxnV1{
+							Type:          "INVOKE",
+							Version:       TransactionV1,
+							SenderAddress: internalUtils.DeadBeef,
+						},
+					},
+					Receipt: TransactionReceipt{
+						Type:            "INVOKE",
+						Hash:            internalUtils.DeadBeef,
+						ExecutionStatus: TxnExecutionStatusSUCCEEDED,
+						FinalityStatus:  TxnFinalityStatusAcceptedOnL1,
+						ActualFee: FeePayment{
+							Amount: internalUtils.DeadBeef,
+							Unit:   UnitFri,
+						},
+					},
+				},
+			},
 		},
-	}[testEnv]
+	}
+
+	preConfirmedBlockMock123 := PreConfirmedBlockWithReceipts{
+		PreConfirmedBlockHeader{
+			Number: 1234,
+		},
+		BlockBodyWithReceipts{
+			Transactions: []TransactionWithReceipt{
+				{
+					Transaction: BlockTransaction{
+						Hash: internalUtils.DeadBeef,
+						Transaction: InvokeTxnV1{
+							Type:          "INVOKE",
+							Version:       TransactionV1,
+							SenderAddress: internalUtils.DeadBeef,
+						},
+					},
+					Receipt: TransactionReceipt{
+						Type:            "INVOKE",
+						Hash:            internalUtils.DeadBeef,
+						ExecutionStatus: TxnExecutionStatusSUCCEEDED,
+						FinalityStatus:  TxnFinalityStatusAcceptedOnL1,
+						ActualFee: FeePayment{
+							Amount: internalUtils.DeadBeef,
+							Unit:   UnitFri,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	testSet := map[tests.TestEnv][]testSetType{
+		tests.MockEnv: {
+			{
+				BlockID:                               WithBlockTag(BlockTagLatest),
+				ExpectedBlockWithReceipts:             &blockMock123,
+				ExpectedPreConfirmedBlockWithReceipts: nil,
+			},
+			{
+				BlockID:                               WithBlockTag(BlockTagL1Accepted),
+				ExpectedBlockWithReceipts:             &blockMock123,
+				ExpectedPreConfirmedBlockWithReceipts: nil,
+			},
+			{
+				BlockID:                               WithBlockTag(BlockTagPreConfirmed),
+				ExpectedBlockWithReceipts:             nil,
+				ExpectedPreConfirmedBlockWithReceipts: &preConfirmedBlockMock123,
+			},
+		},
+		tests.TestnetEnv: {
+			{
+				BlockID: WithBlockTag(BlockTagL1Accepted),
+			},
+			{
+				BlockID: WithBlockTag(BlockTagLatest),
+			},
+			{
+				BlockID: WithBlockTag(BlockTagPreConfirmed),
+			},
+			{
+				BlockID:                   WithBlockNumber(64159),
+				ExpectedBlockWithReceipts: &blockWithReceipt,
+			},
+		},
+		tests.IntegrationEnv: {
+			{
+				BlockID: WithBlockTag(BlockTagL1Accepted),
+			},
+			{
+				BlockID: WithBlockTag(BlockTagLatest),
+			},
+			{
+				BlockID: WithBlockTag(BlockTagPreConfirmed),
+			},
+			{
+				BlockID:                   WithBlockNumber(1_300_000),
+				ExpectedBlockWithReceipts: &blockWithReceipt,
+			},
+		},
+		tests.MainnetEnv: {
+			{
+				BlockID: WithBlockTag("pre_confirmed"),
+			},
+			{
+				BlockID:                   WithBlockNumber(588763),
+				ExpectedBlockWithReceipts: &blockWithReceipt,
+			},
+		},
+	}[tests.TEST_ENV]
 
 	for _, test := range testSet {
-		t.Run("BlockWithReceipts - block", func(t *testing.T) {
+		blockID, _ := test.BlockID.MarshalJSON()
+		t.Run(string(blockID), func(t *testing.T) {
+			result, err := testConfig.Provider.BlockWithReceipts(context.Background(), test.BlockID)
+			require.NoError(t, err, "Error in BlockWithReceipts")
 
-			block, err := provider.BlockWithReceipts(ctx, test.BlockID)
-			require.Nil(t, err)
-			blockCasted := block.(*BlockWithReceipts)
-			require.Equal(t, test.ExpectedBlockWithReceipts, *blockCasted)
+			switch resultType := result.(type) {
+			case *BlockWithReceipts:
+				block, ok := result.(*BlockWithReceipts)
+				require.True(t, ok, fmt.Sprintf("should return *BlockWithReceipts, instead: %T\n", result))
+				assert.True(t, strings.HasPrefix(block.Hash.String(), "0x"), "Block Hash should start with \"0x\", instead: %s", block.Hash)
+				assert.NotEmpty(t, block.Transactions, "the number of transactions should not be 0")
 
+				if test.ExpectedBlockWithReceipts != nil {
+					assert.Exactly(t, block, test.ExpectedBlockWithReceipts)
+				}
+			case *PreConfirmedBlockWithReceipts:
+				pBlock, ok := result.(*PreConfirmedBlockWithReceipts)
+				require.True(t, ok, fmt.Sprintf("should return *Pre_confirmedBlockWithReceipts, instead: %T\n", result))
+
+				if tests.TEST_ENV == tests.MockEnv {
+					assert.Exactly(t, pBlock, test.ExpectedPreConfirmedBlockWithReceipts)
+				} else {
+					assert.NotEmpty(t, pBlock.Number, "Error in Pre_confirmedBlockWithReceipts ParentHash")
+					assert.NotEmpty(t, pBlock.SequencerAddress, "Error in Pre_confirmedBlockWithReceipts SequencerAddress")
+					assert.NotEmpty(t, pBlock.Timestamp, "Error in Pre_confirmedBlockWithReceipts Timestamp")
+				}
+
+			default:
+				t.Fatalf("unexpected block type, found: %T\n", resultType)
+			}
 		})
 	}
 }

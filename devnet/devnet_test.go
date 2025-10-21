@@ -2,12 +2,19 @@ package devnet
 
 import (
 	"math/big"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
 
-	"github.com/NethermindEth/starknet.go/utils"
+	"github.com/NethermindEth/starknet.go/internal/tests"
+	internalUtils "github.com/NethermindEth/starknet.go/internal/utils"
 )
+
+func TestMain(m *testing.M) {
+	tests.LoadEnv()
+	os.Exit(m.Run())
+}
 
 // TestDevnet_IsAlive tests the IsAlive method of the Devnet struct.
 //
@@ -15,11 +22,14 @@ import (
 // It then uses the Fatalf method from the testing package to fail the test if the Devnet is not alive.
 //
 // Parameters:
-// - t: is the testing.T instance for running the test
+//   - t: is the testing.T instance for running the test
+//
 // Returns:
 //
 //	none
 func TestDevnet_IsAlive(t *testing.T) {
+	tests.RunTestOn(t, tests.DevnetEnv)
+
 	d := NewDevNet()
 	if !d.IsAlive() {
 		t.Fatalf("Devnet should be alive!")
@@ -38,6 +48,8 @@ func TestDevnet_IsAlive(t *testing.T) {
 //
 //	none
 func TestDevnet_Accounts(t *testing.T) {
+	tests.RunTestOn(t, tests.DevnetEnv)
+
 	d := NewDevNet()
 	accounts, err := d.Accounts()
 	if err != nil {
@@ -50,20 +62,23 @@ func TestDevnet_Accounts(t *testing.T) {
 
 // TestDevnet_Mint is a test function that tests the Mint method of the Devnet struct.
 //
-// It initializes a new Devnet instance and sets the amount to 1000000000000000000.
+// It initialises a new Devnet instance and sets the amount to 1000000000000000000.
 // Then it calls the Mint method with a test hexadecimal value and the amount.
 // If an error occurs during the Mint method call, it fails the test with the error message.
 // If the NewBalance returned by the Mint method is less than the amount, it fails the test with an error message.
 //
 // Parameters:
-// - t: is the testing.T instance for running the test
+//   - t: is the testing.T instance for running the test
+//
 // Returns:
 //
 //	none
 func TestDevnet_Mint(t *testing.T) {
+	tests.RunTestOn(t, tests.DevnetEnv)
+
 	d := NewDevNet()
 	amount := big.NewInt(int64(1000000000000000000))
-	resp, err := d.Mint(utils.TestHexToFelt(t, "0x1"), amount)
+	resp, err := d.Mint(internalUtils.TestHexToFelt(t, "0x1"), amount)
 	if err != nil {
 		t.Fatalf("Minting ETH should succeed, instead: %v", err)
 	}
